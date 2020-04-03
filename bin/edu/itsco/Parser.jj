@@ -1,0 +1,250 @@
+options {
+  LOOKAHEAD = 1;
+  STATIC = true;
+  IGNORE_CASE = false;
+}
+
+PARSER_BEGIN(Parser)
+
+package edu.itsco;
+import java.util.ArrayList;
+  
+public class Parser {
+
+  public static ArrayList<Variable> listaVariables;
+ 
+  public static void main(String args[]) throws ParseException,
+    SemanticException {
+	listaVariables = new ArrayList<Variable>();
+	System.out.println("Bienvenidos al Compilador del Semestre Pasado");
+    Parser parser = new Parser(System.in);
+    parser.gramaticaPrincipal();
+    System.out.println("Compilo correctamente");
+  }
+
+  public static void addVariable(Variable v)
+  throws SemanticException {
+    if(listaVariables.contains(v)) {
+		//Aqui se lanza la excepcion
+		throw new SemanticException(
+		  SemanticException.VARIABLE_DUPLICADA,
+		  v.getId());
+    }else { 
+	//aqui se agregan las variables a la lista de Variables
+  		listaVariables.add(v);
+ 	} 
+  }
+
+}
+
+PARSER_END(Parser)
+
+SKIP:{
+    " "
+    |"\t"
+    |"\n"
+    |"\r"
+}
+
+TOKEN:{
+    <INICIO: "inicio">
+    |<FIN: "fin">
+
+    |<IMPRIMIR: "imprimir">
+    |<LEER: "leer">
+
+    |<VAR: "var">
+    |<ENTERO: "entero">
+    |<CADENA: "cadena">
+    |<FLOTANTE: "flotante">
+    
+    |<SI: "si">
+    |<ENTONCES: "entonces">
+    |<SINO: "sino">
+
+    |<PARA: "para">
+    |<HASTA: "hasta">
+    |<SIGUIENTE: "siguiente">
+
+    |<HACER: "hacer">
+    |<MIENTRAS: "mientras">
+
+}
+
+TOKEN: {
+    <SUMA: "+">
+    |<RESTA: "-">
+    |<MULT: "*">
+    |<DIV: "/">
+    |<MODULO: "%">
+    |<IGUAL: "=">
+    |<POTENCIA: "^">
+
+    |<MAYOR: ">">
+    |<MENOR: "<">
+
+    |<AND: "&&">
+    |<OR: "||">
+    |<NOT: "!">
+
+    |<AP: "(">
+    |<CP: ")">
+}
+
+TOKEN: {
+    <#digito: ["0"-"9"]>
+    |<#letra: ["a"-"z","A"-"Z"]>
+    
+    |<VALOR_ENTERO: (<digito>)+>
+    |<VALOR_FLOTANTE: (<digito>)+ "." (<digito>)+>
+    |<VALOR_CADENA: "\"" (~["\""])+ "\"" >
+
+    |<ID: ("_"|<letra>) ("_"|<letra>|<digito>)* >    
+}
+
+void gramaticaPrincipal() throws SemanticException:{}
+{
+    <INICIO> <ID>
+        (sentencias())+
+    <FIN>
+}
+
+void sentencias() throws SemanticException:{
+}{
+    gramaticaDeclararVariable()
+    |gramaticaLeer()
+    |gramaticaImprimir()
+    |gramaticaAsignacion()
+    |gramaticaSi()
+    |gramaticaMientras()
+    |gramaticaHacer()
+    |gramaticaPara()
+}   
+
+void gramaticaDeclararVariable() throws SemanticException: {
+	Token id;
+	Token tipo;
+}
+{
+	<VAR> id = <ID> tipo = tipoDato() [ <IGUAL> valor() ]
+	{
+	  //System.out.println(id.image+": "+tipo.image);
+	  Variable v = new Variable(id.image, tipo.image);
+	  addVariable(v);
+	} 	
+}
+
+Token tipoDato(): {
+	Token tipo;
+}
+{
+  	(  	  tipo = <ENTERO>
+  	  | tipo = < FLOTANTE >
+  	  | tipo= < CADENA >
+  	)
+  	{ return tipo;}
+}
+
+void valor(): { }
+{
+	< VALOR_ENTERO > | < VALOR_FLOTANTE > | < VALOR_CADENA >
+	|  < ID >
+}
+
+void gramaticaLeer(): { }
+{
+	< LEER > < AP > < ID > < CP >
+}
+
+void gramaticaImprimir(): { }
+{
+	< IMPRIMIR > < AP > valor() ( < SUMA > valor() )* < CP >
+}
+
+void gramaticaAsignacion(): { }
+{
+  	< ID > < IGUAL > opBasica()
+} 
+
+void opBasica(): { }
+{
+	( valor() | opParentesis() )
+	( opAritmetico () (valor() | opParentesis()) ) *
+}
+
+void opParentesis(): { }
+{
+	< AP > opBasica() < CP >
+}
+
+void opAritmetico(): { }
+{
+	< SUMA > | < RESTA > | < MULT > | < DIV > | < MODULO >
+    | < POTENCIA > 
+}
+
+void gramaticaSi() throws SemanticException: { }
+{
+	< SI > condicion() < ENTONCES >
+		sentencias()
+	[< SINO >
+		sentencias()]
+	< FIN > <SI >
+}
+
+void condicion(): { }
+{
+	condicionSimple() (opLogico() condicionSimple())* 
+}
+
+void condicionSimple(): { }
+{
+  	valor() opRelacional() valor()
+}
+
+void opLogico(): { }
+{
+	< AND > | < OR > 
+}
+
+void opRelacional(): { }
+{
+	< MAYOR > [< IGUAL >]
+| 	< MENOR > [< IGUAL >]
+|   < IGUAL > <IGUAL >
+|   < NOT > < IGUAL >
+}
+
+void gramaticaMientras() throws SemanticException: { }
+{
+  	< MIENTRAS > condicion()
+  		sentencias()
+  	< FIN > < MIENTRAS >
+}
+
+void gramaticaHacer() throws SemanticException: { }
+{
+	< HACER >
+		sentencias()
+	< MIENTRAS > condicion()
+}
+
+void gramaticaPara() throws SemanticException: { }
+{
+	< PARA > < ID > <IGUAL > < VALOR_ENTERO >
+	< HASTA > < VALOR_ENTERO >
+		sentencias()
+	< SIGUIENTE > 
+}
+
+
+
+
+
+
+
+
+
+
+
+
